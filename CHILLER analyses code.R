@@ -40,7 +40,7 @@ long_raw <- raw %>%
     timepoint_index = match(timepoint_col, time_cols) - 1L  # Baseline -> 0, next column -> 1, ...
   )
 
-# pull "Time (seconds)" into its own column so every measure has a real time value
+# pull "Time (seconds)" into its own column (so every measure has time value)
 time_lookup <- long_raw %>%
   filter(measure == "Time (seconds)") %>%
   select(participant_id, video_order, timepoint_index, time_seconds = value)
@@ -71,7 +71,7 @@ long_data <- long_raw %>%
 #   washout             : 240s - 540s   (9 min)
 #   block 2             : 540s - 690s   (11 min 30 sec)
 # Block 1 = ectoparasite for Version A, pathogen for Version B (and vice versa
-# for block 2), since the video order swaps which condition comes first.
+# for block 2), (video order swaps which condition comes first)
 # ----------------------------------------------------------------------------
 
 baseline_end <- 90
@@ -114,7 +114,7 @@ analysis_data <- long_data %>%
 analysis_data <- analysis_data %>%
   filter(!participant_id %in% c(42L, 78L, 169L))  # failed attention check (42, 78) / blank survey (169)
 
-# how many participant x condition cells have no usable data 
+# how many participant x condition cells don't have usable data 
 analysis_data %>%
   summarise(
     missing_amplitude = sum(is.na(amplitude_pct_change)),
@@ -143,13 +143,12 @@ h1_presence_model <- glmer(
 summary(h1_presence_model)
 pairs(emmeans(h1_presence_model, ~ condition))
 
-# --- bias-reduced alternative (recommended) ---
-# confirmed quasi-complete separation: control = 0.6% presence (1/168) vs.
-# ~3-4% in the video conditions. plain glmer's fixed-effect estimates and
-# p-values for a boundary this close to 0 aren't reliable 
-# blme puts a weakly-informative t-prior on the fixed effects, which
+# control = 0.6% presence (1/168) vs. ~3-4% in the video conditions. 
+# plain glmer's fixed-effect estimates and
+# p-values for a boundary this close to 0 not reliable, so use blme
+# weakly-informative t-prior on the fixed effects, 
 # regularizes the near-boundary estimate without changing the model
-# structure. compare these p-values/estimates to the plain glmer ones above.
+# structure. compare p-values/estimates to plain glmer ones above.
 library(blme)
 
 h1_presence_model_br <- bglmer(
@@ -266,7 +265,7 @@ e3_presence_model <- bglmer(
 )
 summary(e3_presence_model)
 
-# E4: Childhood access to undeveloped natural areas moderates sensitivity
+# E4: childhood access to undeveloped natural areas moderates sensitivity
 
 analysis_data <- analysis_data %>%
   mutate(natural_area_access = factor(natural_area_access, ordered = TRUE))
@@ -321,27 +320,11 @@ e6_presence_model <- bglmer(
 )
 summary(e6_presence_model)
 
-##############################################################################
-# diagnostics (for every model above before trusting the p-values)
-##############################################################################
-
-# check_model_fit <- function(model) {
-#   print(performance::check_singularity(model))
-#   plot(residuals(model))
-# }
-# check_model_fit(h1_amplitude_model)
-# check_model_fit(h2_amplitude_model)
-
-##############################################################################
 # tidy output tables (for the appendix / supplementary materials)
-##############################################################################
 
 broom.mixed::tidy(h1_amplitude_model, effects = "fixed", conf.int = TRUE)
 
-# Use the bias-reduced model here, not h1_presence_model — plain glmer's
-# estimates/CIs are unusable given the near-zero control base rate (see the
-# ~300x-1200x odds ratios with CIs into the hundreds of thousands if you tidy
-# h1_presence_model directly).
+# this is bias-reduced model, not h1_presence_model — plain glmer's
 broom.mixed::tidy(h1_presence_model_br, effects = "fixed", conf.int = TRUE, exponentiate = TRUE)
 
 
@@ -356,8 +339,6 @@ print(h2_amplitude_contrasts)
 # --- table 3: presence vs. control (Tukey-adjusted, odds-ratio scale) ---
 h2_presence_contrasts <- confint(pairs(emmeans(h1_presence_model_br, ~ condition)), type = "response")
 print(h2_presence_contrasts)
-# type = "response" back-transforms the log-odds CI to the odds-ratio scale
-# directly, don't have to exponentiate by hand
 
 # demographic stuff
 
